@@ -7,11 +7,11 @@
 
 #include <Windows.h>
 #include <CommCtrl.h>
+#include "../SplitQQTaskbarAddin/SplitQQTaskbarAddin.h"
 #include "resource.h"
 
 class CSplitQQTaskbarDialog {
 #define SPLITQQTASKBAR_OBJECT_PROP_NAME L"__SplitQQTaskbarObject"
-
     enum {
         WM_NOTIFY_CALLBACK = WM_USER + 0x12,
     };
@@ -28,7 +28,9 @@ public:
         , m_hwndDlg(NULL)
         , m_hParent(hParent)
         , m_nShowCmd(nShowCmd)
+        , m_hHook(NULL)
         , m_WM_REBUILDTOOLBAR(RegisterWindowMessageW(L"TaskbarCreated")) {
+
         ZeroMemory(&m_nid, sizeof(m_nid));
         m_nid.cbSize = sizeof(m_nid);
     }
@@ -37,7 +39,7 @@ public:
         HWND hwndDlg = CreateDialogParamW(m_hInstance, m_lpTemplate, m_hParent, SplitQQTaskbarDialogProc, (LPARAM)this);
 
         if (IsWindow(hwndDlg)) {
-            ShowWindow(hwndDlg, m_nShowCmd);
+            // ShowWindow(hwndDlg, m_nShowCmd);
             UpdateWindow(hwndDlg);
 
             MSG msg;
@@ -86,14 +88,15 @@ private:
             m_nid.uCallbackMessage = WM_NOTIFY_CALLBACK;
             m_nid.hIcon = LoadIconW(m_hInstance, MAKEINTRESOURCEW(IDI_MAINFRAME));
             m_nid.uFlags = NIF_TIP | NIF_MESSAGE | NIF_ICON;
-            lstrcpynW(m_nid.szTip, L"SplitQQTaskbar", RTL_NUMBER_OF(m_nid.szTip));
+            lstrcpynW(m_nid.szTip, L"拆分不同QQ进程的任务栏图标\r\nby shilyx 2023.7", RTL_NUMBER_OF(m_nid.szTip));
             m_nid.uTimeout = 3000;
             m_nid.dwInfoFlags = NIIF_INFO;
 
             Shell_NotifyIconW(NIM_ADD, &m_nid);
+            ShowBalloon(L"SplitQQTaskbar", L"后续启动的不同QQ进程的任务栏图标将单独合并", NIIF_INFO, 4000);
 
-            SendMessageW(hwndDlg, WM_SETICON, ICON_BIG, (LPARAM)m_nid.hIcon);
-            SendMessageW(hwndDlg, WM_SETICON, ICON_SMALL, (LPARAM)m_nid.hIcon);
+            SetClassLongPtrW(hwndDlg, GCL_HICON, (LONG_PTR)m_nid.hIcon);
+            SetClassLongPtrW(hwndDlg, GCL_HICONSM, (LONG_PTR)m_nid.hIcon);
 
             m_hwndDlg = hwndDlg;
             OnInitDialog();
@@ -111,13 +114,7 @@ private:
             return 0;
 
         case WM_NOTIFY_CALLBACK:
-            if (lParam == WM_LBUTTONDBLCLK) {
-                if (IsWindowVisible(hwndDlg)) {
-                    ShowWindow(hwndDlg, SW_HIDE);
-                } else {
-                    ShowWindow(hwndDlg, SW_SHOW);
-                }
-            } else if (lParam == WM_RBUTTONUP) {
+            if (lParam == WM_RBUTTONUP) {
                 POINT pt;
 
                 GetCursorPos(&pt);
@@ -132,12 +129,20 @@ private:
                 switch (TrackPopupMenu(hMenu, TPM_RETURNCMD | TPM_NONOTIFY, pt.x, pt.y, 0, hwndDlg, NULL)) {
                 case MI_ABOUT:
                     if (IsWindowEnabled(hwndDlg)) {
-                        MessageBoxW(hwndDlg, L"SplitQQTaskbar application", L"information", MB_SYSTEMMODAL | MB_ICONINFORMATION);
+                        MessageBoxW(
+                            hwndDlg,
+                            L"分属于多个QQ进程的会话在任务栏上共用一个图标，本项目将他们拆分开\r\n"
+                            L"\r\n"
+                            L"项目地址: https://github.com/shilyx/SplitQQTaskbar\r\n"
+                            L"\r\n"
+                            L"by shilyx 2023.7",
+                            L"information",
+                            MB_SYSTEMMODAL | MB_ICONINFORMATION);
                     }
                     break;
 
                 case MI_QUIT:
-                    PostMessageW(hwndDlg, WM_CLOSE, 0, 0);
+                    DestroyWindow(hwndDlg);
                     break;
 
                 default:
@@ -147,12 +152,6 @@ private:
                 DestroyMenu(hMenu);
             }
             return 0;
-
-#ifdef _DEBUG
-        case WM_LBUTTONDOWN:
-            ShowBalloon(L"title", L"balloon tip content", NIIF_WARNING, 4000);
-            break;
-#endif
 
         default:
             if (uMsg == m_WM_REBUILDTOOLBAR) {
@@ -182,10 +181,17 @@ private:
     }
 
     void OnInitDialog() {
+        m_hHook = SetHuuk();
+    }
 
+    void OnDestroy() {
+        if (m_hHook) {
+            UnhuukHuuk(m_hHook);
+        }
     }
 
 private:
+    HHOOK m_hHook;
     HWND m_hwndDlg;
     HWND m_hParent;
     HINSTANCE m_hInstance;
@@ -197,5 +203,19 @@ private:
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
     InitCommonControls();
-    return CSplitQQTaskbarDialog(hInstance, MAKEINTRESOURCEW(IDD_DIALOG), NULL, SW_SHOW).Run();
+
+    HANDLE hMutex = CreateMutexW(NULL, FALSE, L"Global\\{592CED67-BCC6-4C6F-A22A-DDC25A6E47BA}");
+    DWORD dwLastError = GetLastError();
+
+    if (dwLastError == ERROR_ACCESS_DENIED || dwLastError == ERROR_ALREADY_EXISTS) {
+        MessageBoxW(NULL, L"已有实例正在运行，请勿重复运行", L"info", MB_ICONINFORMATION | MB_TOPMOST);
+        return 0;
+    }
+
+    int nRet = CSplitQQTaskbarDialog(hInstance, MAKEINTRESOURCEW(IDD_DIALOG), NULL, SW_SHOW).Run();
+
+    if (hMutex != NULL) {
+        CloseHandle(hMutex);
+    }
+    return nRet;
 }

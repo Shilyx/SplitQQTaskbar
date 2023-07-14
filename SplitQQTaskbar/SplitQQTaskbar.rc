@@ -70,7 +70,7 @@ BEGIN
         BLOCK "080404b0"
         BEGIN
             VALUE "CompanyName", "Shilyx Studio"
-            VALUE "FileDescription", "SplitQQTaskbar"
+            VALUE "FileDescription", "SplitQQTaskbar 拆分不同QQ进程的任务栏图标 https://github.com/shilyx/SplitQQTaskbar"
             VALUE "FileVersion", "1, 0, 0, 1"
             VALUE "InternalName", "SplitQQTaskbar"
             VALUE "LegalCopyright", "Copyright Shilyx Studio 2023"
