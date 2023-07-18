@@ -88,12 +88,12 @@ private:
             m_nid.uCallbackMessage = WM_NOTIFY_CALLBACK;
             m_nid.hIcon = LoadIconW(m_hInstance, MAKEINTRESOURCEW(IDI_MAINFRAME));
             m_nid.uFlags = NIF_TIP | NIF_MESSAGE | NIF_ICON;
-            lstrcpynW(m_nid.szTip, L"拆分不同QQ进程的任务栏图标\r\nby shilyx 2023.7", RTL_NUMBER_OF(m_nid.szTip));
+            lstrcpynW(m_nid.szTip, L"拆分不同QQ/微信进程的任务栏图标\r\nby shilyx 2023.7", RTL_NUMBER_OF(m_nid.szTip));
             m_nid.uTimeout = 3000;
             m_nid.dwInfoFlags = NIIF_INFO;
 
             Shell_NotifyIconW(NIM_ADD, &m_nid);
-            ShowBalloon(L"SplitQQTaskbar", L"后续启动的不同QQ进程的任务栏图标将单独合并", NIIF_INFO, 4000);
+            ShowBalloon(L"SplitQQTaskbar", L"后续启动的不同QQ/微信进程的任务栏图标将单独合并", NIIF_INFO, 4000);
 
             SetClassLongPtrW(hwndDlg, GCL_HICON, (LONG_PTR)m_nid.hIcon);
             SetClassLongPtrW(hwndDlg, GCL_HICONSM, (LONG_PTR)m_nid.hIcon);
@@ -131,7 +131,7 @@ private:
                     if (IsWindowEnabled(hwndDlg)) {
                         MessageBoxW(
                             hwndDlg,
-                            L"分属于多个QQ进程的会话在任务栏上共用一个图标，本项目将他们拆分开\r\n"
+                            L"分属于多个QQ/微信进程的会话在任务栏上共用一个图标，本项目将他们拆分开\r\n"
                             L"\r\n"
                             L"项目地址: https://github.com/shilyx/SplitQQTaskbar\r\n"
                             L"\r\n"

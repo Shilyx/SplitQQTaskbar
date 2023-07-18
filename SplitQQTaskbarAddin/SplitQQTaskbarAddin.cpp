@@ -39,9 +39,11 @@ int APIENTRY DllMain(HINSTANCE hinstDll, DWORD dwReason, LPVOID lpReserved) {
 
         WCHAR szExePath[MAX_PATH] = L"";
         GetModuleFileNameW(GetModuleHandleW(NULL), szExePath, RTL_NUMBER_OF(szExePath));
-        if (lstrcmpiW(PathFindFileNameW(szExePath), L"qq.exe") == 0) {
+        LPCWSTR lpFileName = PathFindFileNameW(szExePath);
+
+        if (lstrcmpiW(lpFileName, L"qq.exe") == 0 || lstrcmpiW(lpFileName, L"WeChat.exe") == 0) {
             WCHAR szAppID[1024] = L"";
-            wnsprintf(szAppID, RTL_NUMBER_OF(szAppID), L"qappid_%lu", GetCurrentProcessId());
+            wnsprintf(szAppID, RTL_NUMBER_OF(szAppID), L"%ls_appid_%lu", lpFileName, GetCurrentProcessId());
             _SetCurrentProcessExplicitAppUserModelID(szAppID);
         }
     } else if (dwReason == DLL_PROCESS_DETACH) {
