@@ -29,7 +29,10 @@ static void _SetCurrentProcessExplicitAppUserModelID(LPWSTR lpAppID) {
         return;
     }
 
-    func(lpAppID);
+    HRESULT hResult = func(lpAppID);
+    WCHAR szDebugMessage[1024] = L"";
+    wnsprintfW(szDebugMessage, RTL_NUMBER_OF(szDebugMessage), L"SplitQQTaskbarAddin %x %ls\n", hResult, lpAppID);
+    OutputDebugStringW(szDebugMessage);
 }
 
 int APIENTRY DllMain(HINSTANCE hinstDll, DWORD dwReason, LPVOID lpReserved) {

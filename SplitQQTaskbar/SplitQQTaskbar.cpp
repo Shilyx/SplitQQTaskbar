@@ -7,6 +7,8 @@
 
 #include <Windows.h>
 #include <CommCtrl.h>
+#include <AclAPI.h>
+#include <accctrl.h>
 #include "../SplitQQTaskbarAddin/SplitQQTaskbarAddin.h"
 #include "resource.h"
 
@@ -201,6 +203,25 @@ private:
     UINT m_WM_REBUILDTOOLBAR;
 };
 
+static void EnableMultiWeChat() {
+    HANDLE hMutex = CreateMutexW(NULL, FALSE, L"_WeChat_App_Instance_Identity_Mutex_Name");
+    SID_IDENTIFIER_AUTHORITY SIDAuthWorld = SECURITY_WORLD_SID_AUTHORITY;
+    PSID pEveryoneSID = NULL; // everyone
+    char szBuffer[4096];
+    PACL pAcl = (PACL)szBuffer;
+
+    AllocateAndInitializeSid(
+        &SIDAuthWorld,
+        1,
+        SECURITY_WORLD_RID,
+        0, 0, 0, 0, 0, 0, 0,
+        &pEveryoneSID);
+
+    InitializeAcl(pAcl, sizeof(szBuffer), ACL_REVISION);
+    AddAccessDeniedAce(pAcl, ACL_REVISION, MUTEX_ALL_ACCESS, pEveryoneSID);
+    SetSecurityInfo(hMutex, SE_KERNEL_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL, pAcl, NULL);
+}
+
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd) {
     InitCommonControls();
 
@@ -211,6 +232,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
         MessageBoxW(NULL, L"已有实例正在运行，请勿重复运行", L"info", MB_ICONINFORMATION | MB_TOPMOST);
         return 0;
     }
+
+    // 允许多开
+    EnableMultiWeChat();
 
     int nRet = CSplitQQTaskbarDialog(hInstance, MAKEINTRESOURCEW(IDD_DIALOG), NULL, SW_SHOW).Run();
 
